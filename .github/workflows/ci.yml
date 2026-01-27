@@ -1,0 +1,51 @@
+name: CI - AquaControle
+
+on:
+  push:
+    branches: [ "main" ]
+  pull_request:
+    branches: [ "main" ]
+
+jobs:
+  backend:
+    name: Backend (Django)
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Baixar código
+        uses: actions/checkout@v4
+
+      - name: Configurar Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Instalar dependências
+        run: |
+          cd backend
+          python -m pip install --upgrade pip
+          pip install django djangorestframework
+
+      - name: Verificar projeto Django
+        run: |
+          cd backend
+          python manage.py check
+
+  frontend:
+    name: Frontend (React)
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Baixar código
+        uses: actions/checkout@v4
+
+      - name: Configurar Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "18"
+
+      - name: Instalar dependências e build
+        run: |
+          cd frontend
+          npm install
+          npm run build
