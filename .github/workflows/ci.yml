@@ -2,9 +2,9 @@ name: CI - AquaControle
 
 on:
   push:
-    branches: [ "main" ]
+    branches: ["main"]
   pull_request:
-    branches: [ "main" ]
+    branches: ["main"]
   workflow_dispatch:
 
 jobs:
@@ -16,34 +16,39 @@ jobs:
       - name: Baixar o código do repositório
         uses: actions/checkout@v4
 
+      - name: Mostrar estrutura (debug rápido)
+        run: |
+          echo "Raiz do repo:"
+          ls -la
+          echo ""
+          echo "Conteúdo de backend (se existir):"
+          if [ -d backend ]; then ls -la backend; else echo "❌ Pasta backend NÃO existe no GitHub."; fi
+
       - name: Preparar Python
         uses: actions/setup-python@v5
         with:
           python-version: "3.12"
 
-      - name: Instalar dependências do backend
+      - name: Rodar Django (somente se existir backend/manage.py)
         run: |
+          if [ ! -f backend/manage.py ]; then
+            echo "❌ Não achei backend/manage.py no GitHub."
+            echo "✅ Correção: no GitHub, a pasta backend precisa existir e conter manage.py."
+            exit 1
+          fi
+
           cd backend
           python -m pip install --upgrade pip
+
           if [ -f requirements.txt ]; then
             pip install -r requirements.txt
           else
+            echo "⚠️ requirements.txt não encontrado. Instalando pacotes mínimos..."
             pip install django djangorestframework django-cors-headers
           fi
 
-      - name: Verificar se o Django está ok
-        run: |
-          cd backend
           python manage.py check
-
-      - name: Rodar migrações (banco local do CI)
-        run: |
-          cd backend
           python manage.py migrate --noinput
-
-      - name: Rodar testes (se existirem)
-        run: |
-          cd backend
           python manage.py test
 
   frontend:
@@ -54,13 +59,24 @@ jobs:
       - name: Baixar o código do repositório
         uses: actions/checkout@v4
 
+      - name: Mostrar estrutura (debug rápido)
+        run: |
+          echo "Conteúdo de frontend (se existir):"
+          if [ -d frontend ]; then ls -la frontend; else echo "❌ Pasta frontend NÃO existe no GitHub."; fi
+
       - name: Preparar Node
         uses: actions/setup-node@v4
         with:
           node-version: "20"
 
-      - name: Instalar dependências do frontend
+      - name: Build React (somente se existir frontend/package.json)
         run: |
+          if [ ! -f frontend/package.json ]; then
+            echo "❌ Não achei frontend/package.json no GitHub."
+            echo "✅ Correção: no GitHub, a pasta frontend precisa existir e conter package.json."
+            exit 1
+          fi
+
           cd frontend
           if [ -f package-lock.json ]; then
             npm ci
@@ -68,7 +84,4 @@ jobs:
             npm install
           fi
 
-      - name: Build do frontend
-        run: |
-          cd frontend
           npm run build
