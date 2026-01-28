@@ -5,6 +5,7 @@ on:
     branches: [ "main" ]
   pull_request:
     branches: [ "main" ]
+  workflow_dispatch:
 
 jobs:
   backend:
@@ -12,40 +13,62 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Baixar código
+      - name: Baixar o código do repositório
         uses: actions/checkout@v4
 
-      - name: Configurar Python
+      - name: Preparar Python
         uses: actions/setup-python@v5
         with:
           python-version: "3.12"
 
-      - name: Instalar dependências
+      - name: Instalar dependências do backend
         run: |
           cd backend
           python -m pip install --upgrade pip
-          pip install django djangorestframework
+          if [ -f requirements.txt ]; then
+            pip install -r requirements.txt
+          else
+            pip install django djangorestframework django-cors-headers
+          fi
 
-      - name: Verificar projeto Django
+      - name: Verificar se o Django está ok
         run: |
           cd backend
           python manage.py check
+
+      - name: Rodar migrações (banco local do CI)
+        run: |
+          cd backend
+          python manage.py migrate --noinput
+
+      - name: Rodar testes (se existirem)
+        run: |
+          cd backend
+          python manage.py test
 
   frontend:
     name: Frontend (React)
     runs-on: ubuntu-latest
 
     steps:
-      - name: Baixar código
+      - name: Baixar o código do repositório
         uses: actions/checkout@v4
 
-      - name: Configurar Node
+      - name: Preparar Node
         uses: actions/setup-node@v4
         with:
-          node-version: "18"
+          node-version: "20"
 
-      - name: Instalar dependências e build
+      - name: Instalar dependências do frontend
         run: |
           cd frontend
-          npm install
+          if [ -f package-lock.json ]; then
+            npm ci
+          else
+            npm install
+          fi
+
+      - name: Build do frontend
+        run: |
+          cd frontend
           npm run build
